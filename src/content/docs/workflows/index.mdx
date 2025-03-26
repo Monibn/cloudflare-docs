@@ -1,95 +1,49 @@
----
-title: Cloudflare Workflows
-order: 0
-type: overview
-pcx_content_type: overview
-sidebar:
-  order: 1
-  badge:
-    text: Beta
-head:
-  - tag: title
-    content: Overview
----
+import requests as req
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 
-import { CardGrid, Description, Feature, LinkTitleCard, Plan, RelatedProduct } from "~/components"
+# توکن ربات تلگرام
+TOKEN = "7314937475:AAFaQcpZL9tX2Xqio7odoPKQw5Hd0hzwP88"
+CHANNEL_ID = "@https://t.me/+4bICe3mjLyxkYTM0"  # نام کاربری کانال شما (با @)
 
-<Description>
+# تابع شروع ربات
+async def start(update: Update, context):
+    await update.message.reply_text("سلام! لطفاً سوالت را بپرس.")
 
-Build durable multi-step applications on Cloudflare Workers with Workflows.
+# بررسی عضویت کاربر در کانال
+async def check_membership(update: Update, context):
+    user_id = update.message.from_user.id
+    status = await context.bot.get_chat_member(CHANNEL_ID, user_id)
+    if status.status in ['member', 'administrator', 'creator']:
+        return True
+    else:
+        await update.message.reply_text("برای استفاده از این ربات، لطفاً ابتدا در کانال عضو شوید.")
+        return False
 
-</Description>
+# پاسخ به سوالات کاربران
+async def handle_message(update: Update, context):
+    if await check_membership(update, context):
+        question = update.message.text
+        try:
+            response = req.get(f"http://5.161.91.18/chat?text={question}")
+            if response.status_code == 200:
+                answer = response.json()  # پاسخ API شما
+                await update.message.reply_text(answer)
+            else:
+                await update.message.reply_text("خطا در دریافت پاسخ از سرور.")
+        except Exception as e:
+            await update.message.reply_text(f"خطا: {str(e)}")
 
-<Plan type="workers-all" />
+# شروع ربات تلگرام
+def main():
+    application = ApplicationBuilder().token(TOKEN).build()
 
-Workflows is a durable execution engine built on Cloudflare Workers. Workflows allow you to build multi-step applications that can automatically retry, persist state and run for minutes, hours, days, or weeks. Workflows introduces a programming model that makes it easier to build reliable, long-running tasks, observe as they progress, and programatically trigger instances based on events across your services.
+    # هندلرهای ربات
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-Refer to the [get started guide](/workflows/get-started/guide/) to start building with Workflows.
+    # شروع به فعالیت
+    application.run_polling()
 
-***
-
-## Features
-
-<Feature header="Deploy your first Workflow" href="/workflows/get-started/guide/" cta="Deploy your first Workflow">
-
-Define your first Workflow, understand how to compose multi-steps, and deploy to production.
-
-</Feature>
-
-<Feature header="Rules of Workflows" href="/workflows/build/rules-of-workflows/" cta="Best practices">
-
-Understand best practices when writing and building applications using Workflows.
-
-</Feature>
-
-<Feature header="Trigger Workflows" href="/workflows/build/trigger-workflows/" cta="Trigger Workflows from Workers">
-
-Learn how to trigger Workflows from your Workers applications, via the REST API, and the command-line.
-
-</Feature>
-
-***
-
-## Related products
-
-<RelatedProduct header="Workers" href="/workers/" product="workers">
-
-Build serverless applications and deploy instantly across the globe for exceptional performance, reliability, and scale.
-
-
-</RelatedProduct>
-
-<RelatedProduct header="Pages" href="/pages/" product="pages">
-
-Deploy dynamic front-end applications in record time.
-
-
-</RelatedProduct>
-
-***
-
-## More resources
-
-<CardGrid>
-
-<LinkTitleCard title="Pricing" href="/workflows/reference/pricing/" icon="seti:shell">
-Learn more about how Workflows is priced.
-</LinkTitleCard>
-
-<LinkTitleCard title="Limits" href="/workflows/reference/limits/" icon="document">
-Learn more about Workflow limits, and how to work within them.
-</LinkTitleCard>
-
-<LinkTitleCard title="Storage options" href="/workers/platform/storage-options/" icon="document">
-Learn more about the storage and database options you can build on with Workers.
-</LinkTitleCard>
-
-<LinkTitleCard title="Developer Discord" href="https://discord.cloudflare.com" icon="discord">
-Connect with the Workers community on Discord to ask questions, show what you are building, and discuss the platform with other developers.
-</LinkTitleCard>
-
-<LinkTitleCard title="@CloudflareDev" href="https://x.com/cloudflaredev" icon="x.com">
-Follow @CloudflareDev on Twitter to learn about product announcements, and what is new in Cloudflare Developer Platform.
-</LinkTitleCard>
-
-</CardGrid>
+if __name__ == "__ad1__":
+    main()
